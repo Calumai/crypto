@@ -1,0 +1,22 @@
+# 環境變數（含 API 金鑰）
+backend/.env
+
+# Python
+backend/venv/
+backend/__pycache__/
+backend/**/__pycache__/
+**/*.pyc
+**/*.pyo
+*.egg-info/
+
+# Node
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+
+# 資料庫
+backend/*.db
+
+# 系統檔案
+.DS_Store
+Thumbs.db
