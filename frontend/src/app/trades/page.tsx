@@ -1,15 +1,24 @@
 "use client";
 
 import { useState } from "react";
-import useSWR from "swr";
+import useSWR, { useSWRConfig } from "swr";
 import TradeTable from "@/components/trades/TradeTable";
 import TradeStats from "@/components/trades/TradeStats";
 import PnLChart from "@/components/charts/PnLChart";
 import { api } from "@/lib/api";
+import type { Trade } from "@/types";
 
 export default function TradesPage() {
   const [page, setPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState("");
+  const { mutate } = useSWRConfig();
+
+  async function handleClose(trade: Trade) {
+    await api.closeTrade(trade.id);
+    mutate(["trades", page, statusFilter]);
+    mutate("trade-summary");
+    mutate("pnl-series");
+  }
 
   const { data: trades } = useSWR(
     ["trades", page, statusFilter],
@@ -46,6 +55,7 @@ export default function TradesPage() {
         trades={trades ?? []}
         page={page}
         onPageChange={setPage}
+        onClose={handleClose}
       />
     </div>
   );

@@ -47,11 +47,17 @@ async def _run_strategy(strategy_id: int):
 
             try:
                 ohlcv = await exchange.fetch_ohlcv(strat.symbol, strat.timeframe, limit=100)
+                ticker = await exchange.fetch_ticker(strat.symbol)
                 await exchange.close()
             except Exception as e:
                 logger.warning(f"OHLCV fetch failed for strategy {strategy_id}: {e}")
                 await asyncio.sleep(60)
                 continue
+
+            current_price = ticker["last"]
+
+            # Check stop loss / take profit on open positions
+            await _check_sl_tp(strat, current_price, db)
 
             raw = [
                 {"time": c[0] // 1000, "open": c[1], "high": c[2],
@@ -77,6 +83,51 @@ async def _run_strategy(strategy_id: int):
             await asyncio.sleep(60)
         finally:
             db.close()
+
+
+async def _check_sl_tp(strat: Strategy, current_price: float, db: Session):
+    """Close open position if stop loss or take profit is hit."""
+    if not strat.stop_loss_pct and not strat.take_profit_pct:
+        return
+
+    open_trade = db.query(Trade).filter(
+        Trade.strategy_id == strat.id,
+        Trade.symbol == strat.symbol,
+        Trade.status == "open",
+    ).first()
+
+    if not open_trade:
+        return
+
+    entry = open_trade.entry_price
+    change_pct = (current_price - entry) / entry
+
+    hit_sl = strat.stop_loss_pct and change_pct <= -strat.stop_loss_pct
+    hit_tp = strat.take_profit_pct and change_pct >= strat.take_profit_pct
+
+    if hit_sl or hit_tp:
+        reason = "止損" if hit_sl else "止盈"
+        logger.info(f"Strategy {strat.id}: {reason} triggered at {current_price} (entry={entry}, change={change_pct:.2%})")
+        exchange = get_exchange()
+        try:
+            order = await exchange.create_market_sell_order(strat.symbol, open_trade.quantity)
+            avg_price = float(order.get("average") or current_price)
+            fee = float((order.get("fee") or {}).get("cost") or 0)
+            open_trade.exit_price = avg_price
+            open_trade.exit_time = datetime.utcnow()
+            open_trade.status = "closed"
+            open_trade.fees = (open_trade.fees or 0) + fee
+            pnl_data = calculate_trade_pnl(open_trade)
+            open_trade.pnl = pnl_data["pnl"]
+            open_trade.pnl_pct = pnl_data["pnl_pct"]
+            db.commit()
+            await ws_manager.broadcast_trades({"event": "trade_closed", "reason": reason,
+                "trade": {"id": open_trade.id, "symbol": open_trade.symbol,
+                          "pnl": open_trade.pnl, "pnl_pct": open_trade.pnl_pct}})
+        except Exception as e:
+            logger.error(f"SL/TP order failed: {e}")
+        finally:
+            await exchange.close()
 
 
 async def _execute_signal(signal: str, strat: Strategy, db: Session):

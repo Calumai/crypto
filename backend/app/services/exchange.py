@@ -1,5 +1,16 @@
+import aiohttp
 import ccxt.async_support as ccxt
 from app.config import settings
+
+# aiodns (c-ares) fails to resolve DNS on some Windows setups.
+# Override TCPConnector to always use ThreadedResolver (getaddrinfo in thread pool).
+class _PatchedConnector(aiohttp.TCPConnector):
+    def __init__(self, *, resolver=None, **kwargs):
+        if resolver is None:
+            resolver = aiohttp.ThreadedResolver()
+        super().__init__(resolver=resolver, **kwargs)
+
+aiohttp.TCPConnector = _PatchedConnector  # type: ignore[misc]
 
 
 _exchange: ccxt.binance | None = None

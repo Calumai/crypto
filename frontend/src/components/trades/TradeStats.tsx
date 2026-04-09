@@ -24,12 +24,12 @@ export default function TradeStats({ summary }: { summary: TradeSummary }) {
     },
     {
       label: "最佳交易",
-      value: `+${summary.best_trade.toFixed(4)}`,
+      value: summary.total_trades > 0 ? `+${summary.best_trade.toFixed(4)}` : "—",
       color: "text-green-400",
     },
     {
       label: "最差交易",
-      value: `${summary.worst_trade.toFixed(4)}`,
+      value: summary.total_trades > 0 ? summary.worst_trade.toFixed(4) : "—",
       color: "text-red-400",
     },
   ];

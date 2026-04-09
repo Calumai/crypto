@@ -1,3 +1,6 @@
+"use client";
+
+import { useState } from "react";
 import type { Trade } from "@/types";
 import { formatDate } from "@/lib/formatters";
 
@@ -5,6 +8,7 @@ interface Props {
   trades: Trade[];
   page: number;
   onPageChange: (p: number) => void;
+  onClose?: (trade: Trade) => Promise<void>;
 }
 
 const STATUS_BADGE: Record<string, string> = {
@@ -13,7 +17,19 @@ const STATUS_BADGE: Record<string, string> = {
   cancelled: "bg-red-900 text-red-300",
 };
 
-export default function TradeTable({ trades, page, onPageChange }: Props) {
+export default function TradeTable({ trades, page, onPageChange, onClose }: Props) {
+  const [closingId, setClosingId] = useState<number | null>(null);
+
+  async function handleClose(trade: Trade) {
+    if (!onClose) return;
+    setClosingId(trade.id);
+    try {
+      await onClose(trade);
+    } finally {
+      setClosingId(null);
+    }
+  }
+
   if (trades.length === 0) {
     return (
       <div className="bg-slate-900 border border-slate-800 rounded-xl p-8 text-center text-slate-500">
@@ -37,6 +53,7 @@ export default function TradeTable({ trades, page, onPageChange }: Props) {
               <th className="text-right px-4 py-3">損益</th>
               <th className="text-left px-4 py-3">狀態</th>
               <th className="text-left px-4 py-3">時間</th>
+              {onClose && <th className="px-4 py-3" />}
             </tr>
           </thead>
           <tbody>
@@ -70,6 +87,19 @@ export default function TradeTable({ trades, page, onPageChange }: Props) {
                   </span>
                 </td>
                 <td className="px-4 py-3 text-slate-400 text-xs">{formatDate(t.entry_time)}</td>
+                {onClose && (
+                  <td className="px-4 py-3">
+                    {t.status === "open" && (
+                      <button
+                        onClick={() => handleClose(t)}
+                        disabled={closingId === t.id}
+                        className="px-2 py-1 text-xs bg-red-900 hover:bg-red-800 text-red-300 rounded transition-colors disabled:opacity-50"
+                      >
+                        {closingId === t.id ? "平倉中..." : "平倉"}
+                      </button>
+                    )}
+                  </td>
+                )}
               </tr>
             ))}
           </tbody>

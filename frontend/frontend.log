@@ -6,7 +6,8 @@
  ⚠ Port 3001 is in use, trying 3002 instead.
  ⚠ Port 3002 is in use, trying 3003 instead.
   ▲ Next.js 14.2.3
-  - Local:        http://localhost:3003
+  - Local:        http://localho[?25h
+
 
  ✓ Starting...
  ✓ Ready in 1385ms
@@ -28,11 +29,17 @@ Unknown font `Geist Mono`
 `next/font` error:
 Unknown font `Geist Mono`
 <w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: ENOENT: no such file or directory, rename 'C:\Users\welik\Projects\crypto-trader\frontend\.next\cache\webpack\server-development\1.pack.gz_' -> 'C:\Users\welik\Projects\crypto-trader\frontend\.next\cache\webpack\server-development\1.pack.gz'
-ack/react-refresh.js 500 in 11ms
- GET /_next/static/chunks/fallback/pages/_app.js 500 in 7ms
- GET /_next/static/chunks/fallback/pages/_error.js 500 in 7ms
- GET / 500 in 6ms
- GET /_next/static/chunks/fallback/webpack.js 500 in 10ms
+ ⨯ src\app\layout.tsx
+`next/font` error:
+Unknown font `Geist Mono`
+ ⨯ src\app\layout.tsx
+`next/font` error:
+Unknown font `Geist Mono`
+ ⨯ src\app\layout.tsx
+`next/font` error:
+Unknown font `Geist Mono`
+[?25h
+k.js 500 in 10ms
  GET /_next/static/chunks/fallback/main.js 500 in 10ms
  GET /_next/static/chunks/fallback/pages/_error.js 500 in 9ms
  GET /_next/static/chunks/fallback/react-refresh.js 500 in 8ms
@@ -43,3 +50,16 @@ ack/react-refresh.js 500 in 11ms
  GET /_next/static/chunks/fallback/react-refresh.js 500 in 7ms
  GET /_next/static/chunks/fallback/pages/_app.js 500 in 6ms
  GET /_next/static/chunks/fallback/pages/_error.js 500 in 6ms
+ ⨯ src\app\layout.tsx
+`next/font` error:
+Unknown font `Geist Mono`
+ ⨯ src\app\layout.tsx
+`next/font` error:
+Unknown font `Geist Mono`
+ ⨯ src\app\layout.tsx
+`next/font` error:
+Unknown font `Geist Mono`
+ ⨯ src\app\layout.tsx
+`next/font` error:
+Unknown font `Geist Mono`
+[?25h

@@ -38,6 +38,8 @@ export const api = {
     request<import("@/types").Strategy>("/strategies", { method: "POST", body: JSON.stringify(body) }),
   updateStrategy: (id: number, body: Partial<import("@/types").Strategy>) =>
     request<import("@/types").Strategy>(`/strategies/${id}`, { method: "PUT", body: JSON.stringify(body) }),
+  closeTrade: (id: number) =>
+    request<import("@/types").Trade>(`/trades/close/${id}`, { method: "POST" }),
   deleteStrategy: (id: number) =>
     request<{ detail: string }>(`/strategies/${id}`, { method: "DELETE" }),
   toggleStrategy: (id: number) =>

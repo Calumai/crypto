@@ -9,6 +9,7 @@ from app.services import exchange as exc_service
 from app.services.pnl_calculator import calculate_trade_pnl, get_summary, get_pnl_series
 
 router = APIRouter(prefix="/trades", tags=["trades"])
+close_router = APIRouter(prefix="/trades", tags=["trades"])
 
 
 @router.get("", response_model=list[TradeResponse])
@@ -49,12 +50,56 @@ def get_trade(trade_id: int, db: Session = Depends(get_db)):
     return trade
 
 
+@close_router.post("/close/{trade_id}", response_model=TradeResponse)
+async def close_trade(trade_id: int, db: Session = Depends(get_db)):
+    """Manually close an open trade by ID."""
+    trade = db.query(Trade).filter(Trade.id == trade_id, Trade.status == "open").first()
+    if not trade:
+        raise HTTPException(status_code=404, detail="Open trade not found")
+
+    try:
+        result = await exc_service.place_market_order(trade.symbol, "sell", trade.quantity)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    trade.exit_price = result["entry_price"]
+    trade.exit_time = datetime.utcnow()
+    trade.status = "closed"
+    trade.fees = (trade.fees or 0) + result["fees"]
+    pnl_data = calculate_trade_pnl(trade)
+    trade.pnl = pnl_data["pnl"]
+    trade.pnl_pct = pnl_data["pnl_pct"]
+    db.commit()
+    db.refresh(trade)
+    return trade
+
+
 @router.post("/manual", response_model=TradeResponse)
 async def manual_order(body: ManualOrderCreate, db: Session = Depends(get_db)):
     try:
         result = await exc_service.place_market_order(body.symbol, body.side, body.quantity)
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+    # Sell → close the most recent open buy trade for this symbol
+    if body.side == "sell":
+        open_trade = (
+            db.query(Trade)
+            .filter(Trade.symbol == body.symbol, Trade.status == "open", Trade.side == "buy")
+            .order_by(Trade.entry_time.desc())
+            .first()
+        )
+        if open_trade:
+            open_trade.exit_price = result["entry_price"]
+            open_trade.exit_time = datetime.utcnow()
+            open_trade.status = "closed"
+            open_trade.fees = (open_trade.fees or 0) + result["fees"]
+            pnl_data = calculate_trade_pnl(open_trade)
+            open_trade.pnl = pnl_data["pnl"]
+            open_trade.pnl_pct = pnl_data["pnl_pct"]
+            db.commit()
+            db.refresh(open_trade)
+            return open_trade
 
     trade = Trade(
         symbol=result["symbol"],

@@ -22,10 +22,12 @@ export default function StrategyForm({ onCreated, onCancel }: Props) {
     // MA params
     fast_period: 9,
     slow_period: 21,
-    // RSI params
+    // RSI + SNR params
     rsi_period: 14,
     oversold: 30,
     overbought: 70,
+    snr_lookback: 20,
+    snr_proximity: 0.005,
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -42,7 +44,13 @@ export default function StrategyForm({ onCreated, onCancel }: Props) {
       const params =
         type === "ma_crossover"
           ? { fast_period: form.fast_period, slow_period: form.slow_period }
-          : { period: form.rsi_period, oversold: form.oversold, overbought: form.overbought };
+          : {
+              period: form.rsi_period,
+              oversold: form.oversold,
+              overbought: form.overbought,
+              snr_lookback: form.snr_lookback,
+              snr_proximity: form.snr_proximity,
+            };
 
       await api.createStrategy({
         name: form.name,
@@ -153,24 +161,41 @@ export default function StrategyForm({ onCreated, onCancel }: Props) {
             </div>
           </div>
         ) : (
-          <div className="grid grid-cols-3 gap-4">
-            <div>
-              <label className="text-xs text-slate-400 mb-1 block">RSI 週期</label>
-              <input type="number" min={2} value={form.rsi_period}
-                onChange={(e) => set("rsi_period", parseInt(e.target.value))}
-                className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500" />
+          <div className="space-y-4">
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <label className="text-xs text-slate-400 mb-1 block">RSI 週期</label>
+                <input type="number" min={2} value={form.rsi_period}
+                  onChange={(e) => set("rsi_period", parseInt(e.target.value))}
+                  className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500" />
+              </div>
+              <div>
+                <label className="text-xs text-slate-400 mb-1 block">超賣 (買入)</label>
+                <input type="number" min={0} max={50} value={form.oversold}
+                  onChange={(e) => set("oversold", parseInt(e.target.value))}
+                  className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500" />
+              </div>
+              <div>
+                <label className="text-xs text-slate-400 mb-1 block">超買 (賣出)</label>
+                <input type="number" min={50} max={100} value={form.overbought}
+                  onChange={(e) => set("overbought", parseInt(e.target.value))}
+                  className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500" />
+              </div>
             </div>
-            <div>
-              <label className="text-xs text-slate-400 mb-1 block">超賣 (買入)</label>
-              <input type="number" min={0} max={50} value={form.oversold}
-                onChange={(e) => set("oversold", parseInt(e.target.value))}
-                className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500" />
-            </div>
-            <div>
-              <label className="text-xs text-slate-400 mb-1 block">超買 (賣出)</label>
-              <input type="number" min={50} max={100} value={form.overbought}
-                onChange={(e) => set("overbought", parseInt(e.target.value))}
-                className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500" />
+            <p className="text-xs text-blue-400">SNR 水平位過濾</p>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-xs text-slate-400 mb-1 block">回溯 K 棒數</label>
+                <input type="number" min={5} max={200} value={form.snr_lookback}
+                  onChange={(e) => set("snr_lookback", parseInt(e.target.value))}
+                  className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500" />
+              </div>
+              <div>
+                <label className="text-xs text-slate-400 mb-1 block">水平位容忍範圍 (0.5% = 0.005)</label>
+                <input type="number" min={0.001} max={0.05} step={0.001} value={form.snr_proximity}
+                  onChange={(e) => set("snr_proximity", parseFloat(e.target.value))}
+                  className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500" />
+              </div>
             </div>
           </div>
         )}

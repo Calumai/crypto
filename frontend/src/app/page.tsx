@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import useSWR from "swr";
 import TickerBar from "@/components/market/TickerBar";
 import PriceChart from "@/components/charts/PriceChart";
+import ManualOrderPanel from "@/components/market/ManualOrderPanel";
 import StrategyCard from "@/components/strategies/StrategyCard";
 import { api } from "@/lib/api";
 import { usePriceStream } from "@/hooks/usePriceStream";
@@ -57,7 +58,14 @@ export default function Dashboard() {
         </div>
       </div>
 
-      <PriceChart candles={candles} liveTick={liveTick} symbol={symbol} />
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+        <div className="lg:col-span-3">
+          <PriceChart candles={candles} liveTick={liveTick} symbol={symbol} />
+        </div>
+        <div className="lg:col-span-1">
+          <ManualOrderPanel symbol={symbol} />
+        </div>
+      </div>
 
       <div>
         <h2 className="text-sm font-semibold text-slate-300 mb-3">

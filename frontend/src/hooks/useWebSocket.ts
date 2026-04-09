@@ -9,8 +9,8 @@ export function useWebSocket(path: string, onMessage: (data: unknown) => void) {
   onMessageRef.current = onMessage;
 
   const connect = useCallback(() => {
-    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-    const url = `${protocol}//localhost:8000${path}`;
+    const backendHost = process.env.NEXT_PUBLIC_BACKEND_WS_URL || `${window.location.protocol === "https:" ? "wss:" : "ws:"}//localhost:8000`;
+    const url = `${backendHost}${path}`;
     const socket = new WebSocket(url);
     ws.current = socket;
 

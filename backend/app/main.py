@@ -8,9 +8,11 @@ from starlette.websockets import WebSocketState
 from app.config import settings
 from app.database import create_tables
 from app.routers import market, trades, strategies, api_keys
+from app.routers.trades import close_router
 from app.services.binance_stream import start_stream, stop_stream
 from app.services.websocket_manager import ws_manager
 from app.services.strategy_engine import restore_active_strategies
+from app.services.auto_close import start_auto_close, stop_auto_close
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -21,9 +23,11 @@ async def lifespan(app: FastAPI):
     create_tables()
     start_stream()
     restore_active_strategies()
+    start_auto_close()
     logger.info("Server started")
     yield
     stop_stream()
+    stop_auto_close()
     logger.info("Server stopped")
 
 
@@ -32,12 +36,14 @@ app = FastAPI(title="Crypto Trader API", lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins_list,
+    allow_origin_regex=r"https://.*\.vercel\.app",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 app.include_router(market.router, prefix="/api")
+app.include_router(close_router, prefix="/api")
 app.include_router(trades.router, prefix="/api")
 app.include_router(strategies.router, prefix="/api")
 app.include_router(api_keys.router, prefix="/api")
