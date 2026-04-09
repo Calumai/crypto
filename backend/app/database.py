@@ -33,5 +33,5 @@ def get_db():
 
 
 def create_tables():
-    from app.models import trade, strategy, api_key  # noqa: F401
+    from app.models import trade, strategy, api_key, auto_zone  # noqa: F401
     Base.metadata.create_all(bind=engine)

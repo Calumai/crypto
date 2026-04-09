@@ -63,6 +63,28 @@ export interface Strategy {
   updated_at: string | null;
 }
 
+export interface AutoZone {
+  is_active: boolean;
+  budget_usdt: number;
+  symbol: string;
+  timeframe: string;
+  trading_type: "spot" | "future";
+  leverage: number;
+  rsi_buy: number;
+  rsi_sell: number;
+  stop_loss_pct: number;
+  take_profit_pct: number;
+  total_trades: number;
+  total_pnl: number;
+  win_rate: number;
+  open_trade: {
+    id: number;
+    entry_price: number;
+    quantity: number;
+    entry_time: string;
+  } | null;
+}
+
 export interface ApiKey {
   id: number;
   exchange: string;

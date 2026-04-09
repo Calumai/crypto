@@ -4,8 +4,10 @@ from datetime import datetime
 
 class ManualOrderCreate(BaseModel):
     symbol: str
-    side: str  # 'buy' | 'sell'
-    quantity: float
+    side: str              # 'buy' | 'sell'
+    usdt_amount: float     # USDT value; for sell this is ignored (uses open trade qty)
+    trading_type: str = "spot"   # 'spot' | 'future'
+    leverage: int = 1
 
 
 class TradeResponse(BaseModel):

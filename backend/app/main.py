@@ -9,10 +9,13 @@ from app.config import settings
 from app.database import create_tables
 from app.routers import market, trades, strategies, api_keys
 from app.routers.trades import close_router
+from app.routers import auto_zone as auto_zone_router
 from app.services.binance_stream import start_stream, stop_stream
 from app.services.websocket_manager import ws_manager
 from app.services.strategy_engine import restore_active_strategies
 from app.services.auto_close import start_auto_close, stop_auto_close
+from app.services.auto_zone_engine import start_auto_zone, stop_auto_zone
+from app.models import auto_zone as _az_model  # ensure AutoZone table is created  # noqa: F401
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -24,10 +27,21 @@ async def lifespan(app: FastAPI):
     start_stream()
     restore_active_strategies()
     start_auto_close()
+    # Restart auto zone if it was active
+    from app.database import SessionLocal
+    from app.models.auto_zone import AutoZone
+    _db = SessionLocal()
+    try:
+        _zone = _db.query(AutoZone).first()
+        if _zone and _zone.is_active:
+            start_auto_zone()
+    finally:
+        _db.close()
     logger.info("Server started")
     yield
     stop_stream()
     stop_auto_close()
+    stop_auto_zone()
     logger.info("Server stopped")
 
 
@@ -47,6 +61,7 @@ app.include_router(close_router, prefix="/api")
 app.include_router(trades.router, prefix="/api")
 app.include_router(strategies.router, prefix="/api")
 app.include_router(api_keys.router, prefix="/api")
+app.include_router(auto_zone_router.router, prefix="/api")
 
 
 @app.get("/")

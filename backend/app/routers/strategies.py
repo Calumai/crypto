@@ -91,7 +91,7 @@ def delete_strategy(strategy_id: int, db: Session = Depends(get_db)):
 
 
 @router.post("/{strategy_id}/toggle", response_model=StrategyResponse)
-def toggle_strategy(strategy_id: int, db: Session = Depends(get_db)):
+async def toggle_strategy(strategy_id: int, db: Session = Depends(get_db)):
     strat = db.query(Strategy).filter(Strategy.id == strategy_id).first()
     if not strat:
         raise HTTPException(status_code=404, detail="Strategy not found")

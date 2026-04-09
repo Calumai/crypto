@@ -18,19 +18,27 @@ export const api = {
   getTicker: (symbol: string) => request<import("@/types").Ticker>(`/market/ticker/${encodeURIComponent(symbol)}`),
   getOHLCV: (symbol: string, timeframe = "1h", limit = 100) =>
     request<import("@/types").OHLCVCandle[]>(`/market/ohlcv/${encodeURIComponent(symbol)}?timeframe=${timeframe}&limit=${limit}`),
+  getBalance: () => request<{ usdt_balance: number | null; usdt_free?: number; error?: string }>("/market/balance"),
 
   // Trades
-  getTrades: (params?: { symbol?: string; status?: string; page?: number }) => {
+  getTrades: (params?: { symbol?: string; status?: string; strategy_id?: number; page?: number }) => {
     const q = new URLSearchParams();
     if (params?.symbol) q.set("symbol", params.symbol);
     if (params?.status) q.set("status", params.status);
+    if (params?.strategy_id !== undefined) q.set("strategy_id", String(params.strategy_id));
     if (params?.page) q.set("page", String(params.page));
     return request<import("@/types").Trade[]>(`/trades?${q}`);
   },
   getTradeSummary: () => request<import("@/types").TradeSummary>("/trades/stats/summary"),
   getPnLSeries: () => request<import("@/types").PnLPoint[]>("/trades/stats/pnl-series"),
-  placeManaualOrder: (body: { symbol: string; side: string; quantity: number }) =>
+  placeManualOrder: (body: { symbol: string; side: string; usdt_amount: number; trading_type?: string; leverage?: number }) =>
     request<import("@/types").Trade>("/trades/manual", { method: "POST", body: JSON.stringify(body) }),
+
+  // Auto Zone
+  getAutoZone: () => request<import("@/types").AutoZone>("/auto-zone"),
+  toggleAutoZone: () => request<{ is_active: boolean }>("/auto-zone/toggle", { method: "POST" }),
+  updateAutoZone: (body: Partial<import("@/types").AutoZone>) =>
+    request<import("@/types").AutoZone>("/auto-zone", { method: "PUT", body: JSON.stringify(body) }),
 
   // Strategies
   getStrategies: () => request<import("@/types").Strategy[]>("/strategies"),

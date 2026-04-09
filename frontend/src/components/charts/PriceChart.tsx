@@ -11,10 +11,16 @@ import {
 } from "lightweight-charts";
 import type { OHLCVCandle, Ticker } from "@/types";
 
+const TIMEFRAME_MS: Record<string, number> = {
+  "1m": 60000, "3m": 180000, "5m": 300000, "15m": 900000,
+  "30m": 1800000, "1h": 3600000, "4h": 14400000, "1d": 86400000,
+};
+
 interface Props {
   candles: OHLCVCandle[];
   liveTick?: Ticker;
   symbol: string;
+  timeframe?: string;
 }
 
 function calculateMA(data: CandlestickData[], period: number) {
@@ -22,12 +28,12 @@ function calculateMA(data: CandlestickData[], period: number) {
   for (let i = period - 1; i < data.length; i++) {
     const slice = data.slice(i - period + 1, i + 1);
     const avg = slice.reduce((sum, c) => sum + c.close, 0) / period;
-    result.push({ time: data[i].time, value: parseFloat(avg.toFixed(4)) });
+    result.push({ time: data[i].time as UTCTimestamp, value: parseFloat(avg.toFixed(4)) });
   }
   return result;
 }
 
-export default function PriceChart({ candles, liveTick, symbol }: Props) {
+export default function PriceChart({ candles, liveTick, symbol, timeframe = "1h" }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
   const candleSeriesRef = useRef<ReturnType<IChartApi["addSeries"]> | null>(null);
@@ -99,18 +105,19 @@ export default function PriceChart({ candles, liveTick, symbol }: Props) {
     };
   }, [candles]);
 
-  // Live tick update
+  // Live tick update — align to current candle's open time to avoid jumping
   useEffect(() => {
     if (!liveTick || !candleSeriesRef.current) return;
-    const now = Math.floor(Date.now() / 1000) as UTCTimestamp;
+    const ms = TIMEFRAME_MS[timeframe] ?? 3600000;
+    const candleTime = Math.floor(Date.now() / ms) * (ms / 1000) as UTCTimestamp;
     candleSeriesRef.current.update({
-      time: now,
+      time: candleTime,
       open: liveTick.price,
       high: liveTick.high || liveTick.price,
       low: liveTick.low || liveTick.price,
       close: liveTick.price,
     });
-  }, [liveTick]);
+  }, [liveTick, timeframe]);
 
   return (
     <div className="bg-slate-900 rounded-xl border border-slate-800 p-4">

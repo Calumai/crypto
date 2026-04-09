@@ -41,7 +41,7 @@ export default function StrategyForm({ onCreated, onCancel }: Props) {
     setLoading(true);
     setError("");
     try {
-      const params =
+      const params: Record<string, number> =
         type === "ma_crossover"
           ? { fast_period: form.fast_period, slow_period: form.slow_period }
           : {

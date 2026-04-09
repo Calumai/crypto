@@ -13,26 +13,37 @@ class _PatchedConnector(aiohttp.TCPConnector):
 aiohttp.TCPConnector = _PatchedConnector  # type: ignore[misc]
 
 
-_exchange: ccxt.binance | None = None
-
-
-def get_exchange(api_key: str = "", secret: str = "", testnet: bool | None = None) -> ccxt.binance:
+def get_exchange(
+    api_key: str = "",
+    secret: str = "",
+    testnet: bool | None = None,
+    trading_type: str = "spot",
+) -> ccxt.binance:
     """Return a ccxt Binance exchange instance."""
     use_testnet = testnet if testnet is not None else settings.use_testnet
     key = api_key or settings.binance_api_key
     sec = secret or settings.binance_secret_key
 
-    exchange = ccxt.binance({
-        "apiKey": key,
-        "secret": sec,
-        "enableRateLimit": True,
-        "options": {
-            "defaultType": "spot",
-        },
-    })
-
-    if use_testnet:
-        exchange.set_sandbox_mode(True)
+    if trading_type == "future":
+        # Use binanceusdm for futures (supports sandbox mode for futures testnet)
+        exchange = ccxt.binanceusdm({
+            "apiKey": key,
+            "secret": sec,
+            "enableRateLimit": True,
+        })
+        if use_testnet:
+            exchange.set_sandbox_mode(True)
+    else:
+        exchange = ccxt.binance({
+            "apiKey": key,
+            "secret": sec,
+            "enableRateLimit": True,
+            "options": {
+                "defaultType": "spot",
+            },
+        })
+        if use_testnet:
+            exchange.set_sandbox_mode(True)
 
     return exchange
 
@@ -97,23 +108,59 @@ async def place_market_order(
     api_key: str = "",
     secret: str = "",
     testnet: bool | None = None,
+    usdt_amount: float | None = None,
+    trading_type: str = "spot",
+    leverage: int = 1,
 ) -> dict:
-    exchange = get_exchange(api_key, secret, testnet)
+    exchange = get_exchange(api_key, secret, testnet, trading_type)
     try:
-        if side == "buy":
+        # Set leverage for futures
+        if trading_type == "future" and leverage > 1:
+            try:
+                await exchange.set_leverage(leverage, symbol)
+            except Exception:
+                pass  # May already be set or not supported for this symbol
+
+        if side == "buy" and usdt_amount is not None:
+            # Use quoteOrderQty so Binance calculates the exact base qty from USDT
+            order = await exchange.create_order(
+                symbol, "market", "buy", None, None,
+                {"quoteOrderQty": usdt_amount}
+            )
+        elif side == "buy":
             order = await exchange.create_market_buy_order(symbol, amount)
+        elif side == "sell" and usdt_amount is not None and trading_type == "future":
+            # Open short position on futures: calculate base qty from current price
+            await exchange.load_markets()
+            ticker = await exchange.fetch_ticker(symbol)
+            price = ticker["last"]
+            raw_qty = usdt_amount / price
+            qty = float(exchange.amount_to_precision(symbol, raw_qty))
+            order = await exchange.create_market_sell_order(symbol, qty)
         else:
-            order = await exchange.create_market_sell_order(symbol, amount)
+            # Spot sell or close futures long: use reduceOnly for futures
+            params = {"reduceOnly": True} if trading_type == "future" else {}
+            order = await exchange.create_market_sell_order(symbol, amount, params)
 
         fee = 0.0
         if order.get("fee") and order["fee"].get("cost"):
             fee = float(order["fee"]["cost"])
 
+        # Derive filled qty: prefer "filled", fall back to cost/average for quoteOrderQty buys
+        filled = float(order.get("filled") or 0)
+        if filled == 0:
+            avg = float(order.get("average") or order.get("price") or 0)
+            cost = float(order.get("cost") or 0)
+            if avg > 0 and cost > 0:
+                filled = cost / avg
+            elif amount > 0:
+                filled = amount
+
         return {
             "order_id": str(order["id"]),
             "symbol": symbol,
             "side": side,
-            "quantity": float(order.get("filled", amount)),
+            "quantity": filled,
             "entry_price": float(order.get("average") or order.get("price") or 0),
             "fees": fee,
         }
