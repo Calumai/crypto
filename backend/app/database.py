@@ -13,7 +13,13 @@ def _make_engine():
 
     if url.startswith("sqlite"):
         return create_engine(url, connect_args={"check_same_thread": False})
-    return create_engine(url, pool_pre_ping=True)
+
+    # PostgreSQL (Supabase/Railway): require SSL
+    return create_engine(
+        url,
+        pool_pre_ping=True,
+        connect_args={"sslmode": "require"},
+    )
 
 
 engine = _make_engine()
