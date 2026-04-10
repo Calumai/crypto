@@ -1,6 +1,15 @@
 import pandas as pd
-import pandas_ta as ta
 from app.strategies.base import BaseStrategy
+
+
+def _calc_rsi(series: pd.Series, period: int) -> pd.Series:
+    delta = series.diff()
+    gain = delta.clip(lower=0)
+    loss = -delta.clip(upper=0)
+    avg_gain = gain.ewm(com=period - 1, min_periods=period).mean()
+    avg_loss = loss.ewm(com=period - 1, min_periods=period).mean()
+    rs = avg_gain / avg_loss.replace(0, float("inf"))
+    return 100 - 100 / (1 + rs)
 
 
 class RSIStrategy(BaseStrategy):
@@ -45,7 +54,7 @@ class RSIStrategy(BaseStrategy):
         lookback = self.params.get("snr_lookback", 20)
         proximity = self.params.get("snr_proximity", 0.005)
 
-        rsi = df.ta.rsi(period)
+        rsi = _calc_rsi(df["close"], period)
         if rsi is None or len(rsi) < 2:
             return "hold"
 

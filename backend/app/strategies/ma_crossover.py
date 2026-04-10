@@ -1,5 +1,4 @@
 import pandas as pd
-import pandas_ta as ta
 from app.strategies.base import BaseStrategy
 
 
@@ -12,10 +11,10 @@ class MACrossoverStrategy(BaseStrategy):
     """
 
     def generate_signal(self, df: pd.DataFrame) -> str:
-        fast = df.ta.ema(self.params.get("fast_period", 9))
-        slow = df.ta.ema(self.params.get("slow_period", 21))
+        fast = df["close"].ewm(span=self.params.get("fast_period", 9), adjust=False).mean()
+        slow = df["close"].ewm(span=self.params.get("slow_period", 21), adjust=False).mean()
 
-        if fast is None or slow is None or len(fast) < 2:
+        if len(fast) < 2:
             return "hold"
 
         prev_above = fast.iloc[-2] > slow.iloc[-2]
