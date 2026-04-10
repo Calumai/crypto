@@ -1,12 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   async rewrites() {
-    const backendUrl = process.env.BACKEND_URL || "http://localhost:8000";
-    // Ensure no trailing slash and valid URL
-    const base = backendUrl.replace(/\/$/, "");
-    if (!base.startsWith("http")) {
-      return [];
-    }
+    const raw = process.env.BACKEND_URL ?? "";
+    const base = raw.trim().replace(/\/$/, "") || "http://localhost:8000";
     return [
       {
         source: "/api/:path*",
